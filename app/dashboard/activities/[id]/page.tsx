@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ActivityCanvas } from "@/components/activity-canvas";
 import React from "react";
 
 function formatSpeed(metersPerSecond: number): string {
@@ -105,6 +106,7 @@ export default async function ActivityPage({
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="analysis">Analysis</TabsTrigger>
+            <TabsTrigger value="share">Share</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -314,6 +316,17 @@ export default async function ActivityPage({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="share" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Share Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ActivityCanvas activity={activity} />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
