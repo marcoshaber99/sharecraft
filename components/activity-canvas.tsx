@@ -185,7 +185,7 @@ const GRADIENTS = [
 
 export function ActivityCanvas({ activity }: ActivityCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [fontScale, setFontScale] = useState(1);
+  const [fontScale, setFontScale] = useState(0.8);
   const [selectedGradient, setSelectedGradient] =
     useState<(typeof GRADIENTS)[number]["id"]>("none");
   const [selectedStats, setSelectedStats] = useState<string[]>([
@@ -328,23 +328,67 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
       ctx.fillText(text, Math.round(x), Math.round(y));
     };
 
+    // Helper function to wrap text
+    const wrapText = (text: string, maxWidth: number) => {
+      const words = text.split(" ");
+      const lines = [];
+      let currentLine = words[0];
+
+      for (let i = 1; i < words.length; i++) {
+        const width = ctx.measureText(currentLine + " " + words[i]).width;
+        if (width < maxWidth) {
+          currentLine += " " + words[i];
+        } else {
+          lines.push(currentLine);
+          currentLine = words[i];
+        }
+      }
+      lines.push(currentLine);
+      return lines;
+    };
+
     // Draw activity name at the top if selected
     if (selectedStats.includes("title")) {
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
-      const titleY = displayHeight * 0.15;
-      ctx.font = `bold ${baseSize * 1.4}px ${selectedFont}`;
-      drawText(activity.name, margin, titleY);
+      ctx.font = `bold ${baseSize * 1.2}px ${selectedFont}`;
+
+      const maxWidth = displayWidth - margin * 2;
+      const lines = wrapText(activity.name, maxWidth);
+      const lineHeight = baseSize * 1.5;
+      const titleStartY = displayHeight * 0.08;
+
+      lines.forEach((line, index) => {
+        drawText(line, margin, titleStartY + index * lineHeight);
+      });
     }
 
-    // Get all stats to display (including main stats)
+    // Draw date in top right if selected
+    if (selectedStats.includes("date")) {
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      const dateY = displayHeight * 0.08; // Keep date aligned with first line of title
+      ctx.font = `500 ${baseSize * 0.9}px ${selectedFont}`;
+      const formattedDate = new Date(activity.start_date).toLocaleDateString(
+        undefined,
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      );
+      drawText(formattedDate, displayWidth - margin, dateY);
+    }
+
+    // Get all stats to display (excluding title and date)
     const allStatsData = selectedStats
+      .filter((id) => id !== "title" && id !== "date") // Exclude title and date from grid
       .map((id) => AVAILABLE_STATS.find((s) => s.id === id))
       .filter((stat): stat is StatOption => !!stat)
       .map((stat) => {
         if (stat.id === "main_stats") {
-          // Split distance and time into separate stats
           return [
             {
               label: "Distance",
@@ -372,28 +416,43 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
 
     // Draw stats in a grid at the bottom
     if (allStatsData.length > 0) {
-      const gridStartY = displayHeight * 0.7;
+      const gridStartY = displayHeight * 0.55; // Move back down but still higher than original
       const columnCount = 2;
-      const rowGap = baseSize * 5.5;
-      const columnWidth = (displayWidth - margin * 2) / columnCount;
+      const rowGap = baseSize * 3.5; // Tighter spacing
+      const labelValueGap = baseSize * 1.2;
+
+      // Calculate grid dimensions
+      const totalWidth = displayWidth - margin * 2;
+      const columnWidth = totalWidth / columnCount;
+      const gridLeft = (displayWidth - totalWidth) / 2;
+
+      // Calculate total grid height to ensure it fits
+      const rowCount = Math.ceil(allStatsData.length / columnCount);
+      const totalGridHeight = rowCount * rowGap - (rowGap - labelValueGap);
+      const bottomMargin = displayHeight * 0.1; // Keep some space at bottom
+
+      // Adjust starting Y if grid would overflow
+      const adjustedGridStartY = Math.min(
+        gridStartY,
+        displayHeight - totalGridHeight - bottomMargin
+      );
 
       allStatsData.forEach((stat, index) => {
         const row = Math.floor(index / columnCount);
         const col = index % columnCount;
-        const x = margin + col * columnWidth;
-        const y = gridStartY + row * rowGap;
-        const centerX = x + columnWidth / 2;
+        const columnCenter = gridLeft + columnWidth * col + columnWidth / 2;
+        const y = adjustedGridStartY + row * rowGap;
 
         // Draw label (smaller, above)
-        ctx.font = `500 ${baseSize * 0.85}px ${selectedFont}`;
+        ctx.font = `500 ${baseSize * 0.7}px ${selectedFont}`;
         ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
         ctx.textAlign = "center";
-        drawText(stat.label, centerX, y);
+        drawText(stat.label, columnCenter, y);
 
         // Draw value (larger, below)
-        ctx.font = `bold ${baseSize * 1.6}px ${selectedFont}`;
+        ctx.font = `bold ${baseSize * 1.3}px ${selectedFont}`;
         ctx.fillStyle = "#ffffff";
-        drawText(stat.value, centerX, y + baseSize * 1.8);
+        drawText(stat.value, columnCenter, y + labelValueGap);
       });
     }
   }, [
