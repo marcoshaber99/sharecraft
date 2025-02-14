@@ -320,7 +320,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
           className="w-full rounded-lg"
           style={{
             aspectRatio: "9/16",
-            backgroundColor: "#000",
+            background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
           }}
         />
       </div>
