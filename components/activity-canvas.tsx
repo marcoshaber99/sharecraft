@@ -139,9 +139,55 @@ const FONTS = [
 type FontOption = (typeof FONTS)[number];
 type FontValue = FontOption["value"];
 
+const GRADIENTS = [
+  { id: "none", name: "Transparent", value: null },
+  {
+    id: "midnight",
+    name: "Midnight Blue",
+    value: {
+      from: "rgba(30, 58, 138, 0.05)",
+      to: "rgba(59, 130, 246, 0.15)",
+    },
+  },
+  {
+    id: "sunset",
+    name: "Sunset",
+    value: {
+      from: "rgba(121, 40, 202, 0.05)",
+      to: "rgba(255, 0, 128, 0.15)",
+    },
+  },
+  {
+    id: "forest",
+    name: "Forest",
+    value: {
+      from: "rgba(6, 78, 59, 0.05)",
+      to: "rgba(5, 150, 105, 0.15)",
+    },
+  },
+  {
+    id: "twilight",
+    name: "Twilight",
+    value: {
+      from: "rgba(49, 46, 129, 0.05)",
+      to: "rgba(129, 140, 248, 0.15)",
+    },
+  },
+  {
+    id: "ember",
+    name: "Ember",
+    value: {
+      from: "rgba(24, 24, 27, 0.05)",
+      to: "rgba(220, 38, 38, 0.15)",
+    },
+  },
+] as const;
+
 export function ActivityCanvas({ activity }: ActivityCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fontScale, setFontScale] = useState(1);
+  const [selectedGradient, setSelectedGradient] =
+    useState<(typeof GRADIENTS)[number]["id"]>("none");
   const [selectedStats, setSelectedStats] = useState<string[]>([
     "title",
     "main_stats",
@@ -223,94 +269,140 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d", { alpha: true });
+    const ctx = canvas.getContext("2d", {
+      alpha: true,
+      willReadFrequently: false,
+    });
     if (!ctx) return;
 
     const container = canvas.parentElement;
     if (!container) return;
 
+    // Calculate dimensions with proper DPR handling
     const dpr = window.devicePixelRatio || 1;
     const displayWidth = container.clientWidth;
     const displayHeight = displayWidth * (16 / 9);
 
-    canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${displayHeight}px`;
+    // Set canvas size with DPR consideration
     canvas.width = Math.floor(displayWidth * dpr);
     canvas.height = Math.floor(displayHeight * dpr);
+
+    // Set display size
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    // Scale all drawing operations by DPR
     ctx.scale(dpr, dpr);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Enable text rendering optimizations
     ctx.imageSmoothingEnabled = true;
+    ctx.textBaseline = "middle"; // Consistent text positioning
 
-    // Make base size smaller by default
-    const baseSize = (displayWidth / 20) * getFontSizeAdjust();
-    const margin = baseSize * 2; // Add margin from edges
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+    // Draw gradient background if selected
+    const gradient = GRADIENTS.find((g) => g.id === selectedGradient)?.value;
+    if (gradient) {
+      const gradientObj = ctx.createLinearGradient(
+        0,
+        displayHeight * 0.5,
+        0,
+        displayHeight
+      );
+
+      gradientObj.addColorStop(0, "rgba(0, 0, 0, 0)");
+      gradientObj.addColorStop(0.3, gradient.from);
+      gradientObj.addColorStop(1, gradient.to);
+
+      ctx.fillStyle = gradientObj;
+      ctx.fillRect(0, 0, displayWidth, displayHeight);
+    }
+
+    // Make base size smaller by default but consider DPR for crispness
+    const baseSize = Math.round((displayWidth / 24) * getFontSizeAdjust());
+    const margin = baseSize * 2;
+
+    // Helper function for text rendering with consistent quality
+    const drawText = (text: string, x: number, y: number) => {
+      // Draw text on pixel boundaries for sharpness
+      ctx.fillText(text, Math.round(x), Math.round(y));
+    };
 
     // Draw activity name at the top if selected
     if (selectedStats.includes("title")) {
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
-      const titleY = displayHeight * 0.06;
-      ctx.font = `bold ${baseSize * 1.2}px ${selectedFont}`;
-      ctx.fillText(activity.name, margin, titleY);
+      const titleY = displayHeight * 0.15;
+      ctx.font = `bold ${baseSize * 1.4}px ${selectedFont}`;
+      drawText(activity.name, margin, titleY);
     }
 
-    // Draw main stats (distance and time) if selected
-    if (selectedStats.includes("main_stats")) {
-      const mainStatsY = displayHeight * 0.85;
-
-      // Distance (left)
-      ctx.font = `bold ${baseSize * 1.2}px ${selectedFont}`;
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "left";
-      ctx.fillText(formatDistance(activity.distance), margin, mainStatsY);
-
-      ctx.font = `500 ${baseSize * 0.5}px ${selectedFont}`;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-      ctx.fillText("Distance", margin, mainStatsY + baseSize * 0.7);
-
-      // Time (right)
-      ctx.textAlign = "right";
-      ctx.font = `bold ${baseSize * 1.2}px ${selectedFont}`;
-      ctx.fillStyle = "#ffffff";
-      const timeX = displayWidth - margin;
-      ctx.fillText(formatTime(activity.moving_time), timeX, mainStatsY);
-
-      ctx.font = `500 ${baseSize * 0.5}px ${selectedFont}`;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-      ctx.fillText("Time", timeX, mainStatsY + baseSize * 0.7);
-    }
-
-    // Draw selected stats
-    const selectedStatsData = selectedStats
-      .filter((id) => id !== "title" && id !== "main_stats") // Exclude title and main_stats as they're handled separately
+    // Get all stats to display (including main stats)
+    const allStatsData = selectedStats
       .map((id) => AVAILABLE_STATS.find((s) => s.id === id))
       .filter((stat): stat is StatOption => !!stat)
-      .map((stat) => ({
-        label: stat.label,
-        value: stat.getValue(activity),
-      }))
-      .filter((stat) => stat.value !== null);
+      .map((stat) => {
+        if (stat.id === "main_stats") {
+          // Split distance and time into separate stats
+          return [
+            {
+              label: "Distance",
+              value: formatDistance(activity.distance),
+            },
+            {
+              label: "Moving Time",
+              value: formatTime(activity.moving_time),
+            },
+          ];
+        }
+        const value = stat.getValue(activity);
+        if (!value) return [];
+        return [
+          {
+            label: stat.label,
+            value,
+          },
+        ];
+      })
+      .flat()
+      .filter(
+        (stat): stat is { label: string; value: string } => stat.value !== null
+      );
 
-    if (selectedStatsData.length > 0) {
-      const startY = displayHeight * 0.2;
-      const spacing = baseSize * 2; // Increased spacing between stats
+    // Draw stats in a grid at the bottom
+    if (allStatsData.length > 0) {
+      const gridStartY = displayHeight * 0.7;
+      const columnCount = 2;
+      const rowGap = baseSize * 5.5;
+      const columnWidth = (displayWidth - margin * 2) / columnCount;
 
-      selectedStatsData.forEach((stat, index) => {
-        const y = startY + spacing * index;
+      allStatsData.forEach((stat, index) => {
+        const row = Math.floor(index / columnCount);
+        const col = index % columnCount;
+        const x = margin + col * columnWidth;
+        const y = gridStartY + row * rowGap;
+        const centerX = x + columnWidth / 2;
 
-        ctx.textAlign = "left";
-        ctx.font = `bold ${baseSize * 0.9}px ${selectedFont}`; // More consistent size
+        // Draw label (smaller, above)
+        ctx.font = `500 ${baseSize * 0.85}px ${selectedFont}`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.textAlign = "center";
+        drawText(stat.label, centerX, y);
+
+        // Draw value (larger, below)
+        ctx.font = `bold ${baseSize * 1.6}px ${selectedFont}`;
         ctx.fillStyle = "#ffffff";
-        ctx.fillText(stat.value!, margin, y);
-
-        ctx.font = `500 ${baseSize * 0.45}px ${selectedFont}`;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-        ctx.fillText(stat.label, margin, y + baseSize * 0.6);
+        drawText(stat.value, centerX, y + baseSize * 1.8);
       });
     }
-  }, [activity, selectedStats, selectedFont, getFontSizeAdjust]);
+  }, [
+    activity,
+    selectedStats,
+    selectedFont,
+    getFontSizeAdjust,
+    selectedGradient,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -320,7 +412,16 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
           className="w-full rounded-lg"
           style={{
             aspectRatio: "9/16",
-            background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
+            background:
+              selectedGradient === "none"
+                ? "#000"
+                : `#000 linear-gradient(135deg, ${
+                    GRADIENTS.find((g) => g.id === selectedGradient)?.value
+                      ?.from || "transparent"
+                  }, ${
+                    GRADIENTS.find((g) => g.id === selectedGradient)?.value
+                      ?.to || "transparent"
+                  })`,
           }}
         />
       </div>
@@ -370,6 +471,45 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
         </div>
 
         <div className="grid gap-4">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-medium">Background</span>
+            </div>
+            <Select
+              value={selectedGradient}
+              onValueChange={(value: (typeof GRADIENTS)[number]["id"]) =>
+                setSelectedGradient(value)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select background" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRADIENTS.map((gradient) => (
+                  <SelectItem
+                    key={gradient.id}
+                    value={gradient.id}
+                    className="flex items-center gap-2"
+                  >
+                    {gradient.value ? (
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{
+                          background: gradient.value
+                            ? `linear-gradient(135deg, ${gradient.value.from}, ${gradient.value.to})`
+                            : undefined,
+                        }}
+                      />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-border" />
+                    )}
+                    {gradient.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-sm font-medium">Font</span>
