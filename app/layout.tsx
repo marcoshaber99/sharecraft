@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat, Oswald, Roboto } from "next/font/google";
-import { Playfair_Display } from "next/font/google";
+import { Inter, Montserrat, Roboto, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,20 +14,20 @@ const montserrat = Montserrat({
   variable: "--font-montserrat",
 });
 
-const oswald = Oswald({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-oswald",
+  variable: "--font-geist",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
 });
 
 const roboto = Roboto({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   variable: "--font-roboto",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
 });
 
 export const metadata: Metadata = {
@@ -44,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${montserrat.variable} ${oswald.variable} ${roboto.variable} ${playfair.variable} font-sans antialiased`}
+        className={`${inter.variable} ${montserrat.variable} ${roboto.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"

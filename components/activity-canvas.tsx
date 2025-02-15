@@ -111,6 +111,18 @@ const FONTS = [
     sizeAdjust: 1,
   },
   {
+    id: "geist",
+    name: "Geist",
+    value: "'Geist', sans-serif",
+    sizeAdjust: 1,
+  },
+  {
+    id: "geist-mono",
+    name: "Geist Mono",
+    value: "'Geist Mono', monospace",
+    sizeAdjust: 0.95,
+  },
+  {
     id: "roboto",
     name: "Roboto",
     value: "'Roboto', sans-serif",
@@ -121,18 +133,6 @@ const FONTS = [
     name: "Montserrat",
     value: "'Montserrat', sans-serif",
     sizeAdjust: 1.05,
-  },
-  {
-    id: "oswald",
-    name: "Oswald",
-    value: "'Oswald', sans-serif",
-    sizeAdjust: 1.2,
-  },
-  {
-    id: "playfair",
-    name: "Playfair Display",
-    value: "'Playfair Display', serif",
-    sizeAdjust: 0.95,
   },
 ] as const;
 
@@ -416,9 +416,9 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
 
     // Draw stats in a grid at the bottom
     if (allStatsData.length > 0) {
-      const gridStartY = displayHeight * 0.55; // Move back down but still higher than original
+      const gridStartY = displayHeight * 0.55;
       const columnCount = 2;
-      const rowGap = baseSize * 3.5; // Tighter spacing
+      const rowGap = baseSize * 4; // Increased from 3.5 to 4
       const labelValueGap = baseSize * 1.2;
 
       // Calculate grid dimensions
@@ -587,7 +587,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
                     value={font.value}
                     style={{
                       fontFamily: font.value,
-                      fontSize: font.id === "oswald" ? "1.1em" : "1em", // Adjust dropdown display
+                      fontSize: "1em",
                     }}
                   >
                     {font.name}
