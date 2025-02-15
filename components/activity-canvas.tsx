@@ -84,6 +84,17 @@ const AVAILABLE_STATS: StatOption[] = [
     getValue: (a) => `${(a.average_speed * 3.6).toFixed(1)} km/h`,
   },
   {
+    id: "pace",
+    label: "Pace",
+    available: true,
+    getValue: (a) => {
+      const paceInMinPerKm = 16.6667 / a.average_speed; // Convert m/s to min/km
+      const minutes = Math.floor(paceInMinPerKm);
+      const seconds = Math.round((paceInMinPerKm - minutes) * 60);
+      return `${minutes}:${seconds.toString().padStart(2, "0")}/km`;
+    },
+  },
+  {
     id: "calories",
     label: "Calories",
     available: true,
