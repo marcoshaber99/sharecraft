@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { StravaActivity } from "@/lib/strava/activities";
 import { formatDistance, formatTime } from "@/lib/utils/format";
 import { Button } from "@/components/ui/button";
-import { Share } from "lucide-react";
+import { Share, ChevronDown } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface ActivityCanvasProps {
   activity: StravaActivity;
@@ -206,6 +207,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
   ]);
   const [selectedFont, setSelectedFont] = useState<FontValue>(FONTS[0].value);
   const { toast } = useToast();
+  const [isStatsOpen, setIsStatsOpen] = useState(true);
 
   // Memoize getFontSizeAdjust
   const getFontSizeAdjust = useCallback(() => {
@@ -475,76 +477,107 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
   ]);
 
   return (
-    <div className="space-y-4">
-      <div className="w-full max-w-sm mx-auto">
-        <canvas
-          ref={canvasRef}
-          className="w-full rounded-lg"
-          style={{
-            aspectRatio: "9/16",
-            background:
-              selectedGradient === "none"
-                ? "#000"
-                : `#000 linear-gradient(135deg, ${
-                    GRADIENTS.find((g) => g.id === selectedGradient)?.value
-                      ?.from || "transparent"
-                  }, ${
-                    GRADIENTS.find((g) => g.id === selectedGradient)?.value
-                      ?.to || "transparent"
-                  })`,
-          }}
-        />
-      </div>
-
+    <div className="space-y-8">
+      {/* Canvas Preview */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Stats</span>
+        <div className="w-full max-w-sm mx-auto">
+          <canvas
+            ref={canvasRef}
+            className="w-full rounded-lg"
+            style={{
+              aspectRatio: "9/16",
+              background:
+                selectedGradient === "none"
+                  ? "#000"
+                  : `#000 linear-gradient(135deg, ${
+                      GRADIENTS.find((g) => g.id === selectedGradient)?.value
+                        ?.from || "transparent"
+                    }, ${
+                      GRADIENTS.find((g) => g.id === selectedGradient)?.value
+                        ?.to || "transparent"
+                    })`,
+            }}
+          />
+        </div>
+        <div className="flex justify-center">
           <Button
-            size="sm"
-            variant="secondary"
             onClick={handleShare}
-            className="h-8"
+            variant="outline"
+            size="sm"
+            className="text-xs font-medium"
           >
-            <Share className="h-4 w-4 mr-2" />
+            <Share className="h-3.5 w-3.5 mr-1.5" />
             Share
           </Button>
         </div>
+      </div>
 
-        <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-4 px-4">
-          {AVAILABLE_STATS.map((stat) => {
-            const isSelected = selectedStats.includes(stat.id);
-            const value = stat.getValue(activity);
-            const isAvailable = value !== null;
+      {/* Customization Controls */}
+      <div className="space-y-8">
+        {/* Stats Selection */}
+        <div className="space-y-3">
+          <Button
+            variant="ghost"
+            className="w-full flex items-center justify-between p-0 h-auto hover:bg-transparent"
+            onClick={() => setIsStatsOpen(!isStatsOpen)}
+          >
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Stats {selectedStats.length > 0 && `(${selectedStats.length})`}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                isStatsOpen && "transform rotate-180"
+              )}
+            />
+          </Button>
+          <div
+            className={cn(
+              "grid transition-all duration-200 ease-out",
+              isStatsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr] opacity-50"
+            )}
+          >
+            <div className="overflow-hidden min-h-0">
+              <div className="flex flex-wrap gap-2 py-1">
+                {AVAILABLE_STATS.map((stat) => {
+                  const isSelected = selectedStats.includes(stat.id);
+                  const value = stat.getValue(activity);
+                  const isAvailable = value !== null;
 
-            return (
-              <Button
-                key={stat.id}
-                variant={isSelected ? "default" : "secondary"}
-                size="sm"
-                className={`shrink-0 ${
-                  !isAvailable ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-                onClick={() => {
-                  if (!isAvailable) return;
-                  setSelectedStats((prev) =>
-                    prev.includes(stat.id)
-                      ? prev.filter((id) => id !== stat.id)
-                      : [...prev, stat.id]
+                  return (
+                    <Button
+                      key={stat.id}
+                      variant={isSelected ? "default" : "secondary"}
+                      size="sm"
+                      className={`${
+                        !isAvailable ? "opacity-50 cursor-not-allowed" : ""
+                      } text-sm py-1 h-auto min-h-[32px]`}
+                      onClick={() => {
+                        if (!isAvailable) return;
+                        setSelectedStats((prev) =>
+                          prev.includes(stat.id)
+                            ? prev.filter((id) => id !== stat.id)
+                            : [...prev, stat.id]
+                        );
+                      }}
+                      disabled={!isAvailable}
+                    >
+                      {stat.label}
+                    </Button>
                   );
-                }}
-                disabled={!isAvailable}
-              >
-                {stat.label}
-              </Button>
-            );
-          })}
+                })}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-4">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-medium">Background</span>
-            </div>
+        {/* Style Controls */}
+        <div className="grid gap-8 sm:grid-cols-2">
+          {/* Background */}
+          <div className="space-y-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Background
+            </span>
             <Select
               value={selectedGradient}
               onValueChange={(value: (typeof GRADIENTS)[number]["id"]) =>
@@ -580,10 +613,11 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
             </Select>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-medium">Font</span>
-            </div>
+          {/* Font Selection */}
+          <div className="space-y-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Font
+            </span>
             <Select
               value={selectedFont}
               onValueChange={(value: FontValue) => setSelectedFont(value)}
@@ -607,23 +641,26 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Font Size</span>
-              <span className="text-sm tabular-nums w-12 text-muted-foreground">
-                {(fontScale * 100).toFixed(0)}%
-              </span>
-            </div>
-            <Slider
-              value={[fontScale]}
-              onValueChange={(values: number[]) => setFontScale(values[0])}
-              min={0.5}
-              max={1.8}
-              step={0.05}
-              className="w-full"
-            />
+        {/* Font Size Slider */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Font Size
+            </span>
+            <span className="text-sm tabular-nums text-muted-foreground">
+              {(fontScale * 100).toFixed(0)}%
+            </span>
           </div>
+          <Slider
+            value={[fontScale]}
+            onValueChange={(values: number[]) => setFontScale(values[0])}
+            min={0.5}
+            max={1.8}
+            step={0.05}
+            className="w-full"
+          />
         </div>
       </div>
     </div>

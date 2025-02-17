@@ -3,7 +3,7 @@ import { Inter, Montserrat, Roboto, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-
+import { Footer } from "@/components/footer";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -53,6 +53,7 @@ export default function RootLayout({
         >
           {children}
           <Toaster />
+          <Footer />
         </ThemeProvider>
       </body>
     </html>

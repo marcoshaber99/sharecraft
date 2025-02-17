@@ -1,7 +1,9 @@
-import SignIn from "@/components/sign-in";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { ModeToggle } from "@/components/mode-toggle";
+import { Navbar } from "@/components/navbar";
+import { Hero } from "@/components/hero";
+import { Footer } from "@/components/footer";
+import { Features } from "@/components/features";
 
 export default async function Home() {
   const session = await auth();
@@ -11,11 +13,15 @@ export default async function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 relative">
-      <div className="absolute top-4 right-4">
-        <ModeToggle />
-      </div>
-      <SignIn />
-    </main>
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1 flex flex-col">
+        <div className="flex justify-center pt-24 sm:pt-32">
+          <Hero />
+        </div>
+        <Features />
+      </main>
+      <Footer />
+    </div>
   );
 }
