@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Hero } from "@/components/hero";
-import { Footer } from "@/components/footer";
 import { Features } from "@/components/features";
 
 export default async function Home() {
@@ -21,7 +20,6 @@ export default async function Home() {
         </div>
         <Features />
       </main>
-      <Footer />
     </div>
   );
 }
