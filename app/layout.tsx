@@ -43,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${montserrat.variable} ${roboto.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${inter.variable} ${montserrat.variable} ${roboto.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased min-h-screen flex flex-col`}
       >
         <ThemeProvider
           attribute="class"
@@ -51,7 +51,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <div className="flex-1 flex flex-col">{children}</div>
           <Toaster />
           <Footer />
         </ThemeProvider>
