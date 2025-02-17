@@ -9,7 +9,7 @@ export function Navbar() {
         <Link href="/" className="flex items-center space-x-2">
           <Share2 className="h-6 w-6 text-[#FC4C02]" />
           <h1 className="text-lg font-geist font-semibold tracking-tight">
-            StravaShare
+            Sharecraft
           </h1>
         </Link>
         <ModeToggle />
