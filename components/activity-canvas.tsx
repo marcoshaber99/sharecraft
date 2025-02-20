@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { StravaActivity } from "@/lib/strava/activities";
 import { formatDistance, formatTime } from "@/lib/utils/format";
 import { Button } from "@/components/ui/button";
-import { Share, ChevronDown } from "lucide-react";
+import { Share, ChevronDown, ChevronUp } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -48,6 +48,13 @@ const AVAILABLE_STATS: StatOption[] = [
       a.average_watts ? `${Math.round(a.average_watts)}W` : null,
   },
   {
+    id: "avg_hr",
+    label: "Avg Heart Rate",
+    available: true,
+    getValue: (a) =>
+      a.average_heartrate ? `${Math.round(a.average_heartrate)} bpm` : null,
+  },
+  {
     id: "max_hr",
     label: "Max HR",
     available: true,
@@ -89,7 +96,15 @@ const AVAILABLE_STATS: StatOption[] = [
     label: "Pace",
     available: true,
     getValue: (a) => {
-      const paceInMinPerKm = 16.6667 / a.average_speed; // Convert m/s to min/km
+      if (a.type === "Swim") {
+        // Convert m/s to min/100m for swimming
+        const paceInMinPer100m = 100 / a.average_speed / 60;
+        const minutes = Math.floor(paceInMinPer100m);
+        const seconds = Math.round((paceInMinPer100m - minutes) * 60);
+        return `${minutes}:${seconds.toString().padStart(2, "0")}/100m`;
+      }
+      // Regular pace for other activities (min/km)
+      const paceInMinPerKm = 16.6667 / a.average_speed;
       const minutes = Math.floor(paceInMinPerKm);
       const seconds = Math.round((paceInMinPerKm - minutes) * 60);
       return `${minutes}:${seconds.toString().padStart(2, "0")}/km`;
@@ -195,6 +210,14 @@ const GRADIENTS = [
   },
 ] as const;
 
+const FONT_SIZES = [
+  { id: "xs", label: "XS", value: 0.6 },
+  { id: "s", label: "S", value: 0.8 },
+  { id: "m", label: "M", value: 1.0 },
+  { id: "l", label: "L", value: 1.2 },
+  { id: "xl", label: "XL", value: 1.4 },
+] as const;
+
 export function ActivityCanvas({ activity }: ActivityCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fontScale, setFontScale] = useState(0.8);
@@ -208,6 +231,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
   const [selectedFont, setSelectedFont] = useState<FontValue>(FONTS[0].value);
   const { toast } = useToast();
   const [isStatsOpen, setIsStatsOpen] = useState(true);
+  const [showAdvancedSize, setShowAdvancedSize] = useState(false);
 
   // Memoize getFontSizeAdjust
   const getFontSizeAdjust = useCallback(() => {
@@ -643,24 +667,64 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
           </div>
         </div>
 
-        {/* Font Size Slider */}
+        {/* Font Size Controls */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Font Size
             </span>
-            <span className="text-sm tabular-nums text-muted-foreground">
-              {(fontScale * 100).toFixed(0)}%
-            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setShowAdvancedSize(!showAdvancedSize)}
+            >
+              {showAdvancedSize ? (
+                <ChevronUp className="h-3 w-3 mr-1" />
+              ) : (
+                <ChevronDown className="h-3 w-3 mr-1" />
+              )}
+              {showAdvancedSize ? "Simple" : "Advanced"}
+            </Button>
           </div>
-          <Slider
-            value={[fontScale]}
-            onValueChange={(values: number[]) => setFontScale(values[0])}
-            min={0.5}
-            max={1.8}
-            step={0.05}
-            className="w-full"
-          />
+
+          {/* Preset Buttons */}
+          <div className="flex gap-2">
+            {FONT_SIZES.map((size) => (
+              <Button
+                key={size.id}
+                variant={
+                  Math.abs(fontScale - size.value) < 0.01
+                    ? "default"
+                    : "outline"
+                }
+                size="sm"
+                className="flex-1 text-xs h-7"
+                onClick={() => setFontScale(size.value)}
+              >
+                {size.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Advanced Slider */}
+          {showAdvancedSize && (
+            <div className="pt-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm tabular-nums text-muted-foreground">
+                  {(fontScale * 100).toFixed(0)}%
+                </span>
+              </div>
+              <Slider
+                value={[fontScale]}
+                onValueChange={(values: number[]) => setFontScale(values[0])}
+                min={0.5}
+                max={1.8}
+                step={0.05}
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
