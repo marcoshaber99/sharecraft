@@ -6,7 +6,7 @@ import { formatDistance, formatTime } from "@/lib/utils/format";
 import { Button } from "@/components/ui/button";
 import { Share, ChevronDown, ChevronUp } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { useToast } from "@/hooks/use-toast";
+import { shareImage } from "@/lib/utils/share";
 import {
   Select,
   SelectContent,
@@ -15,208 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { FONTS, GRADIENTS, FONT_SIZES, AVAILABLE_STATS } from "@/lib/constants";
+import type { StatOption } from "@/lib/constants";
 
 interface ActivityCanvasProps {
   activity: StravaActivity;
 }
 
-type StatOption = {
-  id: string;
-  label: string;
-  available: boolean;
-  getValue: (activity: StravaActivity) => string | null;
-};
-
-const AVAILABLE_STATS: StatOption[] = [
-  {
-    id: "title",
-    label: "Title",
-    available: true,
-    getValue: (a) => a.name,
-  },
-  {
-    id: "main_stats",
-    label: "Distance & Time",
-    available: true,
-    getValue: () => "true",
-  },
-  {
-    id: "avg_power",
-    label: "Avg Power",
-    available: true,
-    getValue: (a) =>
-      a.average_watts ? `${Math.round(a.average_watts)}W` : null,
-  },
-  {
-    id: "avg_hr",
-    label: "Avg Heart Rate",
-    available: true,
-    getValue: (a) =>
-      a.average_heartrate ? `${Math.round(a.average_heartrate)} bpm` : null,
-  },
-  {
-    id: "max_hr",
-    label: "Max HR",
-    available: true,
-    getValue: (a) =>
-      a.max_heartrate ? `${Math.round(a.max_heartrate)} bpm` : null,
-  },
-  {
-    id: "avg_cadence",
-    label: "Avg Cadence",
-    available: true,
-    getValue: (a) =>
-      a.average_cadence ? `${Math.round(a.average_cadence)} rpm` : null,
-  },
-  {
-    id: "date",
-    label: "Date",
-    available: true,
-    getValue: (a) =>
-      new Date(a.start_date).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-  },
-  {
-    id: "max_speed",
-    label: "Max Speed",
-    available: true,
-    getValue: (a) => `${(a.max_speed * 3.6).toFixed(1)} km/h`,
-  },
-  {
-    id: "avg_speed",
-    label: "Avg Speed",
-    available: true,
-    getValue: (a) => `${(a.average_speed * 3.6).toFixed(1)} km/h`,
-  },
-  {
-    id: "pace",
-    label: "Pace",
-    available: true,
-    getValue: (a) => {
-      if (a.type === "Swim") {
-        // Convert m/s to min/100m for swimming
-        const paceInMinPer100m = 100 / a.average_speed / 60;
-        const minutes = Math.floor(paceInMinPer100m);
-        const seconds = Math.round((paceInMinPer100m - minutes) * 60);
-        return `${minutes}:${seconds.toString().padStart(2, "0")}/100m`;
-      }
-      // Regular pace for other activities (min/km)
-      const paceInMinPerKm = 16.6667 / a.average_speed;
-      const minutes = Math.floor(paceInMinPerKm);
-      const seconds = Math.round((paceInMinPerKm - minutes) * 60);
-      return `${minutes}:${seconds.toString().padStart(2, "0")}/km`;
-    },
-  },
-  {
-    id: "calories",
-    label: "Calories",
-    available: true,
-    getValue: (a) => (a.calories ? `${a.calories} cal` : null),
-  },
-  {
-    id: "total_elevation",
-    label: "Total Elevation",
-    available: true,
-    getValue: (a) => `${Math.round(a.total_elevation_gain)}m`,
-  },
-];
-
-const FONTS = [
-  {
-    id: "inter",
-    name: "Inter",
-    value: "'Inter', sans-serif",
-    sizeAdjust: 1, // baseline
-  },
-  {
-    id: "system",
-    name: "System",
-    value: "system-ui",
-    sizeAdjust: 1,
-  },
-  {
-    id: "geist",
-    name: "Geist",
-    value: "'Geist', sans-serif",
-    sizeAdjust: 1,
-  },
-  {
-    id: "geist-mono",
-    name: "Geist Mono",
-    value: "'Geist Mono', monospace",
-    sizeAdjust: 0.95,
-  },
-  {
-    id: "roboto",
-    name: "Roboto",
-    value: "'Roboto', sans-serif",
-    sizeAdjust: 1.1,
-  },
-  {
-    id: "montserrat",
-    name: "Montserrat",
-    value: "'Montserrat', sans-serif",
-    sizeAdjust: 1.05,
-  },
-] as const;
-
 type FontOption = (typeof FONTS)[number];
 type FontValue = FontOption["value"];
-
-const GRADIENTS = [
-  { id: "none", name: "Transparent", value: null },
-  {
-    id: "midnight",
-    name: "Midnight Blue",
-    value: {
-      from: "rgba(30, 58, 138, 0.05)",
-      to: "rgba(59, 130, 246, 0.15)",
-    },
-  },
-  {
-    id: "sunset",
-    name: "Sunset",
-    value: {
-      from: "rgba(121, 40, 202, 0.05)",
-      to: "rgba(255, 0, 128, 0.15)",
-    },
-  },
-  {
-    id: "forest",
-    name: "Forest",
-    value: {
-      from: "rgba(6, 78, 59, 0.05)",
-      to: "rgba(5, 150, 105, 0.15)",
-    },
-  },
-  {
-    id: "twilight",
-    name: "Twilight",
-    value: {
-      from: "rgba(49, 46, 129, 0.05)",
-      to: "rgba(129, 140, 248, 0.15)",
-    },
-  },
-  {
-    id: "ember",
-    name: "Ember",
-    value: {
-      from: "rgba(24, 24, 27, 0.05)",
-      to: "rgba(220, 38, 38, 0.15)",
-    },
-  },
-] as const;
-
-const FONT_SIZES = [
-  { id: "xs", label: "XS", value: 0.6 },
-  { id: "s", label: "S", value: 0.8 },
-  { id: "m", label: "M", value: 1.0 },
-  { id: "l", label: "L", value: 1.2 },
-  { id: "xl", label: "XL", value: 1.4 },
-] as const;
 
 export function ActivityCanvas({ activity }: ActivityCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -229,7 +36,6 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
     "date",
   ]);
   const [selectedFont, setSelectedFont] = useState<FontValue>(FONTS[0].value);
-  const { toast } = useToast();
   const [isStatsOpen, setIsStatsOpen] = useState(true);
   const [showAdvancedSize, setShowAdvancedSize] = useState(false);
 
@@ -239,67 +45,14 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
     return (currentFont?.sizeAdjust || 1) * fontScale;
   }, [selectedFont, fontScale]);
 
-  const handleShare = async () => {
+  const handleShare = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    try {
-      const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((blob) => resolve(blob!), "image/png")
-      );
-
-      // Try native sharing first
-      if (
-        navigator.share &&
-        navigator.canShare({ files: [new File([blob], "activity.png")] })
-      ) {
-        try {
-          await navigator.share({
-            files: [new File([blob], "activity.png", { type: "image/png" })],
-          });
-          return;
-        } catch (err) {
-          if (!(err instanceof Error) || err.name !== "AbortError") {
-            console.error("Share failed:", err);
-          }
-        }
-      }
-
-      // Try clipboard
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({ "image/png": blob }),
-        ]);
-        toast({
-          description: "Copied to clipboard",
-          duration: 2000,
-        });
-        return;
-      } catch (err) {
-        console.error("Clipboard failed:", err);
-      }
-
-      // Fallback to download
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${activity.name
-        .replace(/[^a-z0-9]/gi, "_")
-        .toLowerCase()}.png`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast({
-        description: "Image downloaded",
-        duration: 2000,
-      });
-    } catch (err) {
-      console.error("Failed to export image:", err);
-      toast({
-        variant: "destructive",
-        description: "Failed to export image",
-        duration: 3000,
-      });
-    }
+    const fileName = `${activity.name
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase()}.png`;
+    shareImage({ canvas, fileName });
   };
 
   useEffect(() => {
