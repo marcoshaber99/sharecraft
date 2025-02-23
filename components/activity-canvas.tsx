@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { StravaActivity } from "@/lib/strava/activities";
 import { formatDistance, formatTime } from "@/lib/utils/format";
 import { Button } from "@/components/ui/button";
-import { Share, ChevronDown, ChevronUp } from "lucide-react";
+import { Share, ChevronDown, ChevronUp, Sun, Moon } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { shareImage } from "@/lib/utils/share";
 import {
@@ -36,6 +36,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
     "date",
   ]);
   const [selectedFont, setSelectedFont] = useState<FontValue>(FONTS[0].value);
+  const [isWhiteText, setIsWhiteText] = useState(true);
   const [isStatsOpen, setIsStatsOpen] = useState(true);
   const [showAdvancedSize, setShowAdvancedSize] = useState(false);
 
@@ -137,11 +138,14 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
       return lines;
     };
 
+    const textColor = isWhiteText ? "#ffffff" : "#000000";
+    const secondaryColor = isWhiteText ? "#ffffffcc" : "#000000cc";
+
     // Draw activity name at the top if selected
     if (selectedStats.includes("title")) {
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = textColor;
       ctx.font = `bold ${baseSize * 1.2}px ${selectedFont}`;
 
       const maxWidth = displayWidth - margin * 2;
@@ -158,7 +162,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
     if (selectedStats.includes("date")) {
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.fillStyle = secondaryColor;
       const dateY = displayHeight * 0.08; // Keep date aligned with first line of title
       ctx.font = `500 ${baseSize * 0.9}px ${selectedFont}`;
       const formattedDate = new Date(activity.start_date).toLocaleDateString(
@@ -235,13 +239,13 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
 
         // Draw label (smaller, above)
         ctx.font = `500 ${baseSize * 0.7}px ${selectedFont}`;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.fillStyle = secondaryColor;
         ctx.textAlign = "center";
         drawText(stat.label, columnCenter, y);
 
         // Draw value (larger, below)
         ctx.font = `bold ${baseSize * 1.3}px ${selectedFont}`;
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = textColor;
         drawText(stat.value, columnCenter, y + labelValueGap);
       });
     }
@@ -251,6 +255,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
     selectedFont,
     getFontSizeAdjust,
     selectedGradient,
+    isWhiteText,
   ]);
 
   return (
@@ -265,8 +270,10 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
               aspectRatio: "9/16",
               background:
                 selectedGradient === "none"
-                  ? "#000"
-                  : `#000 linear-gradient(135deg, ${
+                  ? isWhiteText
+                    ? "#000"
+                    : "#fff"
+                  : `${isWhiteText ? "#000" : "#fff"} linear-gradient(135deg, ${
                       GRADIENTS.find((g) => g.id === selectedGradient)?.value
                         ?.from || "transparent"
                     }, ${
@@ -276,7 +283,7 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
             }}
           />
         </div>
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-2">
           <Button
             onClick={handleShare}
             variant="outline"
@@ -285,6 +292,18 @@ export function ActivityCanvas({ activity }: ActivityCanvasProps) {
           >
             <Share className="h-3.5 w-3.5 mr-1.5" />
             Share
+          </Button>
+          <Button
+            onClick={() => setIsWhiteText(!isWhiteText)}
+            variant="outline"
+            size="sm"
+            className="text-xs font-medium"
+          >
+            {isWhiteText ? (
+              <Moon className="h-3.5 w-3.5" />
+            ) : (
+              <Sun className="h-3.5 w-3.5" />
+            )}
           </Button>
         </div>
       </div>
