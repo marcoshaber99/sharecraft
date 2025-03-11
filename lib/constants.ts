@@ -1,4 +1,5 @@
 import type { StravaActivity } from "@/lib/strava/activities";
+import { formatDistance, formatTime } from "@/lib/utils/format";
 
 export const STRAVA = {
   BRAND_COLOR: "#FC4C02",
@@ -21,10 +22,16 @@ export const AVAILABLE_STATS: StatOption[] = [
     getValue: (a) => a.name,
   },
   {
-    id: "main_stats",
-    label: "Distance & Time",
+    id: "distance",
+    label: "Distance",
     available: true,
-    getValue: () => "true",
+    getValue: (a) => formatDistance(a.distance),
+  },
+  {
+    id: "time",
+    label: "Moving Time",
+    available: true,
+    getValue: (a) => formatTime(a.moving_time),
   },
   {
     id: "avg_power",
